@@ -73,20 +73,20 @@ High-level flow:
 
 ```mermaid
 flowchart LR
-  subgraph ingest[" "]
-    R["Reddit public listings<br/>(.json, per subreddit)"]
+  subgraph Reddit["Reddit (public .json)"]
+    R[Listings per subreddit]
   end
 
-  subgraph local["On your machine"]
-    F["Filters<br/>(keywords, score, age)"]
-    D["Dedupe<br/>state file"]
-    C["Daily caps<br/>per run / per day"]
+  subgraph Local["Your machine"]
+    F[Keyword and score filters]
+    D[State file dedupe]
+    C[Per-run and daily caps]
   end
 
-  subgraph citedy["Citedy Agent API"]
-    A["POST /api/agent/autopilot<br/>topic + source_urls"]
-    P["Sync 200 or async 202"]
-    Q["Optional poll until job done"]
+  subgraph CitedyAPI["Citedy Agent API"]
+    A["POST /autopilot + source_urls"]
+    P{200 sync or 202 async}
+    Q[Poll job until done]
   end
 
   R --> F --> D --> C --> A --> P --> Q

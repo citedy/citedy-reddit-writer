@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin
+
+0 8,14,20 * * * cd /opt/citedy-reddit-writer && set -a && [ -f .env ] && . ./.env && set +a && .venv/bin/citedy-reddit-run --config "$CITEDY_REDDIT_CONFIG" >> /var/log/citedy-reddit-writer.log 2>&1

@@ -1,0 +1,16 @@
+[Unit]
+Description=Citedy Reddit writer → autopilot (one shot)
+Documentation=https://github.com/citedy/citedy-reddit-writer
+
+[Service]
+Type=oneshot
+User=citedy
+Group=citedy
+WorkingDirectory=/opt/citedy-reddit-writer
+EnvironmentFile=-/opt/citedy-reddit-writer/.env
+ExecStart=/opt/citedy-reddit-writer/.venv/bin/citedy-reddit-run --config ${CITEDY_REDDIT_CONFIG}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

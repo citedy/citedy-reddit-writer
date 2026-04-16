@@ -47,5 +47,6 @@ git subtree split --prefix=citedy-reddit-writer -b "$SPLIT_BRANCH"
 echo "==> push to $REMOTE_URL (main)"
 git push -u "$REMOTE_NAME" "$SPLIT_BRANCH:main"
 
-echo "==> done. Next: open Actions on GitHub, then:"
-echo "    git tag v0.1.0 && git push $REMOTE_NAME v0.1.0"
+echo "==> done. Next: open Actions on GitHub (CI), then tag the SPLIT tip (not monorepo HEAD):"
+echo "    git tag v0.1.0 $SPLIT_BRANCH && git push $REMOTE_NAME v0.1.0"
+echo "    (or after fetch: git fetch $REMOTE_NAME main && git tag v0.1.0 $REMOTE_NAME/main && git push $REMOTE_NAME v0.1.0)"

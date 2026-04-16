@@ -322,7 +322,7 @@ citedy-reddit-setup
 
 ## For maintainers
 
-**Publishing** (sync from monorepo → [citedy/citedy-reddit-writer](https://github.com/citedy/citedy-reddit-writer), PyPI tags, CI): see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+Open-source **users** only need this repo and PyPI. **Releasing** (monorepo → [citedy/citedy-reddit-writer](https://github.com/citedy/citedy-reddit-writer), subtree, PyPI tags) is documented **inside the private Citedy monorepo** at `docs/citedy-reddit-writer/DEPLOYMENT.md` — it is intentionally **not** shipped here.
 
 ---
 

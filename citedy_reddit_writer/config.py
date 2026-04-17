@@ -125,6 +125,11 @@ def _get_str_list(data: dict[str, Any], *keys: str) -> list[str]:
 
 def load_config(path: Path) -> AppConfig:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return load_config_from_mapping(raw)
+
+
+def load_config_from_mapping(raw: Any) -> AppConfig:
+    """Build AppConfig from parsed YAML. Used for files and bundled defaults."""
     if not isinstance(raw, dict):
         raise ValueError("Config must be a YAML mapping")
 

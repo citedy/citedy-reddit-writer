@@ -1,0 +1,52 @@
+# Bundled defaults — used when no config.yaml is present.
+# Copy to config.yaml to customize. API key: env CITEDY_AGENT_API_KEY or citedy.agent_api_key.
+
+citedy:
+  base_url: "https://www.citedy.com"
+  agent_api_key: ""
+
+reddit:
+  listing: "hot"
+  top_time: "week"
+  posts_per_subreddit: 15
+
+subreddits:
+  - "SEO"
+  - "bigseo"
+
+filters:
+  include_keywords:
+    - "seo"
+    - "google"
+    - "ranking"
+  exclude_keywords:
+    - "nsfw"
+    - "hiring"
+  min_score: 5
+  max_age_hours: 72
+
+run:
+  articles_per_run: 1
+  max_articles_per_day: 6
+  topic_template: "Original guide: address the discussion and search intent behind: {title} (context: r/{subreddit})"
+  language: "en"
+  size: "standard"
+  mode: "standard"
+  wait_for_completion: false
+  auto_publish: true
+  disable_competition: false
+  illustrations: false
+  audio: false
+
+dedupe:
+  state_path: "./data/state.json"
+  max_tracked_post_ids: 800
+  sync_recent_article_titles: true
+  recent_articles_limit: 40
+
+poll:
+  interval_seconds: 15
+  max_wait_seconds: 600
+
+logging:
+  level: "INFO"

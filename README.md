@@ -39,6 +39,18 @@ citedy-reddit-run --help
 citedy-reddit-setup --help
 ```
 
+### Minimal run (API key only)
+
+From **v0.1.1**, you can skip `config.yaml` if the bundled defaults are fine (sample subreddits `SEO`, `bigseo`, filters, caps — see `citedy_reddit_writer/default_config.yaml` in the repo). Set **`CITEDY_AGENT_API_KEY`** (and optionally **`CITEDY_BASE_URL`** if not using `https://www.citedy.com`), load `.env` if you use one, then:
+
+```bash
+set -a && source .env && set +a
+citedy-reddit-run --dry-run
+citedy-reddit-run
+```
+
+If **`config.yaml`** exists in the current directory, it wins. If there is no `config.yaml` but **`config.example.yaml`** is present, that file is used. Otherwise the packaged defaults apply and relative paths (e.g. state file) resolve from **the current working directory**.
+
 Upgrade later:
 
 ```bash
@@ -289,6 +301,17 @@ Ensure the service environment loads **`.env`** or injects `CITEDY_AGENT_API_KEY
 | **Codex**       | In the **saas-blog** monorepo: `.codex/skills/citedy-reddit-writer/SKILL.md`                                                            |
 
 This repo includes **`.claude/`** and **`.cursor/skills/`** for a **standalone clone**. For Codex-only setups, copy `.codex/skills/...` from the monorepo if needed.
+
+### saas-blog monorepo: one command from the Next.js repo root
+
+If **`CITEDY_AGENT_API_KEY`** (and optional vars) live in the **monorepo** `.env` and `config.yaml` is under **`citedy-reddit-writer/`** (after `citedy-reddit-setup`), run:
+
+```bash
+npm run citedy-reddit-writer -- --dry-run   # safe: no API writes
+npm run citedy-reddit-writer                # real run
+```
+
+This uses **`run-with-env.sh`**: loads **`../.env`** then **`citedy-reddit-writer/.env`** (package overrides parent). Uses **`citedy-reddit-writer/.venv/bin/citedy-reddit-run`** when present; otherwise **`citedy-reddit-run`** on `PATH`. Install once: `cd citedy-reddit-writer && python3 -m venv .venv && .venv/bin/pip install -e .`.
 
 ---
 

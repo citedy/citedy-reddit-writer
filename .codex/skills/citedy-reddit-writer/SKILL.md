@@ -1,8 +1,3 @@
----
-name: citedy-reddit-writer
-description: "Reddit listings → Citedy POST /api/agent/autopilot (no scout credits). citedy-reddit-setup + citedy-reddit-run. Use with Codex; same CLI as Cursor skill in .cursor/skills/citedy-reddit-writer/SKILL.md."
----
-
 # citedy-reddit-writer (Codex)
 
 Repo: [github.com/citedy/citedy-reddit-writer](https://github.com/citedy/citedy-reddit-writer)
@@ -15,30 +10,42 @@ Repo: [github.com/citedy/citedy-reddit-writer](https://github.com/citedy/citedy-
 2. Poll **`GET /api/agent/articles/{jobId}`** on **202**.
 3. Does **not** use **`scout/reddit`**.
 
-## Setup
+## Install
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
-citedy-reddit-setup
 ```
+
+## API key only (v0.1.1+)
+
+Put **`CITEDY_AGENT_API_KEY`** in **`.env`**. No **`config.yaml`** required for first run — packaged **`default_config.yaml`** is used when no local config exists.
+
+```bash
+set -a && source .env && set +a
+citedy-reddit-run --dry-run
+citedy-reddit-run
+```
+
+**`citedy-reddit-setup`** — optional, for custom subreddits/filters.
 
 ## Run
 
 ```bash
 set -a && source .env && set +a
-citedy-reddit-run --config config.yaml
+citedy-reddit-run --dry-run
+citedy-reddit-run
 ```
 
-**Dry-run:** `citedy-reddit-run --config config.example.yaml --dry-run`
+**Dry-run:** safe test (no Citedy calls, no state updates).
 
 ## In Cursor / Codex
 
 1. Work from repo root (where `pyproject.toml` lives).
 2. Install venv + `pip install -e .` if entrypoints missing.
-3. Use **`citedy-reddit-setup`** until `config.yaml` and `.env` exist.
+3. With key in `.env`, run the CLI — avoid unnecessary questions; wizard only for customization.
 4. Prefer **`--dry-run`** for safe tests.
 
-**saas-blog monorepo:** package lives at **`citedy-reddit-writer/`** under the Next.js repo root; use **`cd citedy-reddit-writer`** for CLI. From monorepo root: **`.cursor/skills/citedy-reddit-writer/SKILL.md`** (Cursor), **`.codex/skills/citedy-reddit-writer/SKILL.md`** (Codex in `.codex/`), **`.claude/skills/citedy-reddit-writer`** + **`/citedy-reddit-writer`** (Claude Code).
+**saas-blog monorepo:** from **monorepo root**: **`npm run citedy-reddit-writer -- --dry-run`** or **`npm run citedy-reddit-writer`** (uses **`run-with-env.sh`**: parent `.env` + `citedy-reddit-writer/.env`). Same paths: **`.cursor/...`**, **`.codex/...`**, **`.claude/...`**, slash **`/citedy-reddit-writer`**.
 
 **Parity:** Keep this file in sync with **`.cursor/skills/citedy-reddit-writer/SKILL.md`** in this package when editing OSS instructions.

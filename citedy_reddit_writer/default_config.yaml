@@ -6,6 +6,7 @@ citedy:
   agent_api_key: ""
 
 reddit:
+  transport: "auto"
   listing: "hot"
   top_time: "week"
   posts_per_subreddit: 15

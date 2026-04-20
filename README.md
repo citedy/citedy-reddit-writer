@@ -58,6 +58,23 @@ pipx upgrade citedy-reddit-writer
 # or: pip install -U citedy-reddit-writer
 ```
 
+### Reddit transport fallback
+
+Reddit may intermittently block one HTTP stack while allowing another for the exact same public listing URL. The default **`reddit.transport: auto`** mode tries **`httpx`** first and automatically retries via Python’s stdlib **`urllib`** when Reddit returns a block page or a transport-specific fetch failure.
+
+You can pin the behavior if you need to debug or force one path:
+
+```yaml
+reddit:
+  transport: "auto" # auto | httpx | urllib
+```
+
+Or override it at runtime:
+
+```bash
+export CITEDY_REDDIT_TRANSPORT=urllib
+```
+
 ---
 
 ## First run in two minutes
@@ -252,7 +269,7 @@ flowchart LR
 
 **Step by step**
 
-1. **Fetch** recent posts from each configured subreddit using Reddit’s **public** listing endpoints (not the paid “scout” Reddit scout inside Citedy — so you don’t burn scout credits on every scheduler tick).
+1. **Fetch** recent posts from each configured subreddit using Reddit’s **public** listing endpoints (not the paid “scout” Reddit scout inside Citedy — so you don’t burn scout credits on every scheduler tick). In the default `auto` mode the CLI will retry with an alternate HTTP transport if Reddit blocks the first attempt.
 2. **Filter** by include/exclude keywords, minimum score, and max post age.
 3. **Dedupe** using a local JSON state file (post IDs and title hashes), optionally cross-checking **recent article titles** from your Citedy account so you don’t repeat topics.
 4. **Respect caps**: `articles_per_run` and `max_articles_per_day` prevent bursts.

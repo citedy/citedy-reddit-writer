@@ -18,6 +18,7 @@ class CitedyConfig:
 
 @dataclass
 class RedditConfig:
+    transport: str
     user_agent: str
     posts_per_subreddit: int
     listing: str
@@ -76,6 +77,13 @@ class AppConfig:
     dedupe: DedupeConfig
     poll: PollConfig
     logging: LoggingConfig
+
+
+def _normalize_reddit_transport(raw: str) -> str:
+    value = raw.strip().lower()
+    if value in {"httpx", "urllib"}:
+        return value
+    return "auto"
 
 
 def _get_str(data: dict[str, Any], *keys: str, default: str = "") -> str:
@@ -155,6 +163,10 @@ def load_config_from_mapping(raw: Any) -> AppConfig:
     return AppConfig(
         citedy=CitedyConfig(base_url=base, agent_api_key=key),
         reddit=RedditConfig(
+            transport=_normalize_reddit_transport(
+                _get_str(reddit_block, "transport")
+                or os.environ.get("CITEDY_REDDIT_TRANSPORT", "auto")
+            ),
             user_agent=_get_str(
                 reddit_block,
                 "user_agent",

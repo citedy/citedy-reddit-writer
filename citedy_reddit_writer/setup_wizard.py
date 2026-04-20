@@ -42,6 +42,7 @@ def _write_env(env_path: Path, api_key: str, config_rel: str) -> None:
         f"CITEDY_REDDIT_CONFIG={config_rel}",
         "# Optional:",
         "# CITEDY_BASE_URL=https://www.citedy.com",
+        "# CITEDY_REDDIT_TRANSPORT=auto",
         "# CITEDY_ALERT_WEBHOOK_URL=",
         "# DRY_RUN=0",
         "",
@@ -119,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     doc: dict = {
         "citedy": {"base_url": base_url, "agent_api_key": ""},
         "reddit": {
+            "transport": "auto",
             "user_agent": f"citedy-reddit-writer/{__version__} (automated)",
             "posts_per_subreddit": per_sub,
             "listing": listing,

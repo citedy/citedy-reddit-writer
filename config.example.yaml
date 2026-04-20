@@ -5,6 +5,7 @@ citedy:
   agent_api_key: ""
 
 reddit:
+  transport: "auto"
   user_agent: "citedy-reddit-writer/0.1.0 (batch blog assist)"
   posts_per_subreddit: 15
   listing: "hot"

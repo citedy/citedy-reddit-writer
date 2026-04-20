@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 from dataclasses import dataclass
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import httpx
 
@@ -22,6 +25,14 @@ class RedditPost:
     created_utc: float
 
 
+class RedditFetchError(RuntimeError):
+    """Generic Reddit listing fetch failure."""
+
+
+class RedditBlockedError(RedditFetchError):
+    """Reddit returned a block page or similar anti-bot response."""
+
+
 def _listing_path(listing: str, top_time: str) -> str:
     l = listing.lower()
     if l == "new":
@@ -34,19 +45,27 @@ def _listing_path(listing: str, top_time: str) -> str:
     return "hot"
 
 
-def fetch_subreddit_posts(
-    client: httpx.Client,
-    cfg: AppConfig,
-    subreddit: str,
-) -> list[RedditPost]:
+def _listing_url(cfg: AppConfig, subreddit: str) -> str:
     path = _listing_path(cfg.reddit.listing, cfg.reddit.top_time)
     limit = cfg.reddit.posts_per_subreddit
-    url = f"https://www.reddit.com/r/{subreddit}/{path}.json?raw_json=1&limit={limit}"
-    headers = {"User-Agent": cfg.reddit.user_agent}
-    log.debug("GET %s", url)
-    resp = client.get(url, headers=headers, timeout=30.0)
-    resp.raise_for_status()
-    data = resp.json()
+    return f"https://www.reddit.com/r/{subreddit}/{path}.json?raw_json=1&limit={limit}"
+
+
+def _looks_like_block(status_code: int, content_type: str, body_text: str) -> bool:
+    lower_body = body_text.lower()
+    lower_type = content_type.lower()
+    if status_code == 403 and "blocked" in lower_body:
+        return True
+    if "text/html" in lower_type and "<body" in lower_body and "blocked" in lower_body:
+        return True
+    return False
+
+
+def _response_preview(body_text: str) -> str:
+    return body_text[:160].replace("\n", " ").strip()
+
+
+def _parse_listing_payload(data: object, subreddit: str) -> list[RedditPost]:
     children = (
         data.get("data", {}).get("children", []) if isinstance(data, dict) else []
     )
@@ -80,6 +99,116 @@ def fetch_subreddit_posts(
             )
         )
     return out
+
+
+def _fetch_payload_httpx(
+    client: httpx.Client,
+    url: str,
+    headers: dict[str, str],
+) -> object:
+    resp = client.get(url, headers=headers, timeout=30.0)
+    body_text = resp.text
+    if _looks_like_block(resp.status_code, resp.headers.get("Content-Type", ""), body_text):
+        raise RedditBlockedError(
+            f"Client error '{resp.status_code} Blocked' for url '{url}'"
+        )
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise RedditFetchError(str(exc)) from exc
+    try:
+        return resp.json()
+    except ValueError as exc:
+        raise RedditFetchError(
+            f"Invalid JSON from {url}: {_response_preview(body_text)}"
+        ) from exc
+
+
+def _fetch_payload_urllib(url: str, headers: dict[str, str]) -> object:
+    request = Request(url, headers=headers)
+    try:
+        with urlopen(request, timeout=30.0) as resp:
+            body = resp.read()
+            status_code = getattr(resp, "status", 200)
+            content_type = resp.headers.get("Content-Type", "")
+    except HTTPError as exc:
+        body_text = exc.read().decode("utf-8", "ignore")
+        content_type = exc.headers.get("Content-Type", "") if exc.headers else ""
+        if _looks_like_block(exc.code, content_type, body_text):
+            raise RedditBlockedError(
+                f"HTTP {exc.code} blocked for url '{url}'"
+            ) from exc
+        raise RedditFetchError(f"HTTP {exc.code} for url '{url}'") from exc
+    except URLError as exc:
+        raise RedditFetchError(f"URL error for '{url}': {exc}") from exc
+
+    body_text = body.decode("utf-8", "ignore")
+    if _looks_like_block(status_code, content_type, body_text):
+        raise RedditBlockedError(f"HTTP {status_code} blocked for url '{url}'")
+    try:
+        return json.loads(body_text)
+    except ValueError as exc:
+        raise RedditFetchError(
+            f"Invalid JSON from {url}: {_response_preview(body_text)}"
+        ) from exc
+
+
+def _transport_order(configured_transport: str) -> tuple[str, ...]:
+    if configured_transport == "httpx":
+        return ("httpx",)
+    if configured_transport == "urllib":
+        return ("urllib",)
+    return ("httpx", "urllib")
+
+
+def fetch_subreddit_posts(
+    client: httpx.Client,
+    cfg: AppConfig,
+    subreddit: str,
+) -> list[RedditPost]:
+    url = _listing_url(cfg, subreddit)
+    headers = {
+        "User-Agent": cfg.reddit.user_agent,
+        "Accept": "application/json",
+    }
+    log.debug("GET %s", url)
+
+    last_error: Exception | None = None
+    transports = _transport_order(cfg.reddit.transport)
+    for index, transport in enumerate(transports):
+        try:
+            if transport == "httpx":
+                payload = _fetch_payload_httpx(client, url, headers)
+            else:
+                payload = _fetch_payload_urllib(url, headers)
+            if index:
+                log.info("r/%s: Reddit fetch succeeded via %s", subreddit, transport)
+            return _parse_listing_payload(payload, subreddit)
+        except RedditBlockedError as exc:
+            last_error = exc
+            if index + 1 >= len(transports):
+                raise
+            log.warning(
+                "r/%s %s blocked by Reddit, retrying via %s",
+                subreddit,
+                transport,
+                transports[index + 1],
+            )
+        except RedditFetchError as exc:
+            last_error = exc
+            if index + 1 >= len(transports):
+                raise
+            log.warning(
+                "r/%s %s fetch failed (%s), retrying via %s",
+                subreddit,
+                transport,
+                exc,
+                transports[index + 1],
+            )
+
+    if last_error is not None:
+        raise last_error
+    raise RedditFetchError(f"Failed to fetch subreddit listing for r/{subreddit}")
 
 
 def fetch_all_candidates(cfg: AppConfig) -> list[RedditPost]:

@@ -5,9 +5,11 @@ import json
 import logging
 import os
 import sys
+from importlib import resources
 from pathlib import Path
 
 import httpx
+import yaml
 
 from citedy_reddit_writer.citedy_client import (
     extract_job_id,
@@ -17,7 +19,7 @@ from citedy_reddit_writer.citedy_client import (
     poll_article_job,
     post_autopilot,
 )
-from citedy_reddit_writer.config import load_config
+from citedy_reddit_writer.config import AppConfig, load_config, load_config_from_mapping
 from citedy_reddit_writer.filter_dedupe import (
     filter_candidates,
     format_topic,
@@ -46,6 +48,28 @@ def _setup_logging(level: str) -> None:
         level=getattr(logging, level, logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+
+
+def _resolve_config_and_base(
+    config_arg: str,
+) -> tuple[AppConfig, Path, str] | None:
+    """Load AppConfig; base dir anchors relative paths (state_path). Returns None on failure."""
+    requested = Path(config_arg).expanduser().resolve()
+
+    if requested.is_file():
+        return load_config(requested), requested.parent, "file"
+
+    example = Path.cwd() / "config.example.yaml"
+    if example.is_file():
+        return load_config(example), example.parent, "example"
+
+    try:
+        ref = resources.files("citedy_reddit_writer").joinpath("default_config.yaml")
+        raw = yaml.safe_load(ref.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    cfg = load_config_from_mapping(raw)
+    return cfg, Path.cwd(), "bundled"
 
 
 def _alert_webhook(url: str | None, message: str) -> None:
@@ -78,15 +102,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    config_path = Path(args.config).expanduser().resolve()
-    if not config_path.is_file():
-        print(f"Config not found: {config_path}", file=sys.stderr)
-        print("Run: citedy-reddit-setup", file=sys.stderr)
+    resolved = _resolve_config_and_base(args.config)
+    if resolved is None:
+        print(
+            f"Config not found: {Path(args.config).expanduser().resolve()}",
+            file=sys.stderr,
+        )
+        print(
+            "Put CITEDY_AGENT_API_KEY in .env, then either: create config.yaml, "
+            "add config.example.yaml in the current directory, or upgrade citedy-reddit-writer "
+            "(bundled defaults). Or run: citedy-reddit-setup",
+            file=sys.stderr,
+        )
         return 2
 
-    cfg = load_config(config_path)
+    cfg, config_base, config_source = resolved
     _setup_logging(cfg.logging.level)
     log = logging.getLogger(__name__)
+    if config_source == "bundled":
+        log.info(
+            "No %s — using packaged default_config.yaml; add config.yaml to customize",
+            args.config,
+        )
+    elif config_source == "example":
+        log.info(
+            "Using %s/config.example.yaml (create config.yaml to override)",
+            config_base,
+        )
 
     dry_run = args.dry_run or os.environ.get("DRY_RUN", "").lower() in (
         "1",
@@ -100,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         _alert_webhook(alert_url, "citedy-reddit-run: missing API key")
         return 2
 
-    state_path = _resolve_path(config_path.parent, cfg.dedupe.state_path)
+    state_path = _resolve_path(config_base, cfg.dedupe.state_path)
     state: RunState = load_state(state_path)
 
     today_count = daily_count(state)

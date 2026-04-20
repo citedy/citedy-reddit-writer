@@ -18,6 +18,7 @@ class CitedyConfig:
 
 @dataclass
 class RedditConfig:
+    transport: str
     user_agent: str
     posts_per_subreddit: int
     listing: str
@@ -78,6 +79,13 @@ class AppConfig:
     logging: LoggingConfig
 
 
+def _normalize_reddit_transport(raw: str) -> str:
+    value = raw.strip().lower()
+    if value in {"httpx", "urllib"}:
+        return value
+    return "auto"
+
+
 def _get_str(data: dict[str, Any], *keys: str, default: str = "") -> str:
     cur: Any = data
     for k in keys:
@@ -125,6 +133,11 @@ def _get_str_list(data: dict[str, Any], *keys: str) -> list[str]:
 
 def load_config(path: Path) -> AppConfig:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return load_config_from_mapping(raw)
+
+
+def load_config_from_mapping(raw: Any) -> AppConfig:
+    """Build AppConfig from parsed YAML. Used for files and bundled defaults."""
     if not isinstance(raw, dict):
         raise ValueError("Config must be a YAML mapping")
 
@@ -150,6 +163,10 @@ def load_config(path: Path) -> AppConfig:
     return AppConfig(
         citedy=CitedyConfig(base_url=base, agent_api_key=key),
         reddit=RedditConfig(
+            transport=_normalize_reddit_transport(
+                _get_str(reddit_block, "transport")
+                or os.environ.get("CITEDY_REDDIT_TRANSPORT", "auto")
+            ),
             user_agent=_get_str(
                 reddit_block,
                 "user_agent",

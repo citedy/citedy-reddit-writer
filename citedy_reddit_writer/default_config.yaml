@@ -1,4 +1,5 @@
-# Reference layout. Prefer: `citedy-reddit-setup` to generate config.yaml + .env
+# Bundled defaults — used when no config.yaml is present.
+# Copy to config.yaml to customize. API key: env CITEDY_AGENT_API_KEY or citedy.agent_api_key.
 
 citedy:
   base_url: "https://www.citedy.com"
@@ -6,10 +7,9 @@ citedy:
 
 reddit:
   transport: "auto"
-  user_agent: "citedy-reddit-writer/0.1.0 (batch blog assist)"
-  posts_per_subreddit: 15
   listing: "hot"
   top_time: "week"
+  posts_per_subreddit: 15
 
 subreddits:
   - "SEO"

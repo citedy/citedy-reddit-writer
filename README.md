@@ -39,11 +39,40 @@ citedy-reddit-run --help
 citedy-reddit-setup --help
 ```
 
+### Minimal run (API key only)
+
+From **v0.1.1**, you can skip `config.yaml` if the bundled defaults are fine (sample subreddits `SEO`, `bigseo`, filters, caps — see `citedy_reddit_writer/default_config.yaml` in the repo). Set **`CITEDY_AGENT_API_KEY`** (and optionally **`CITEDY_BASE_URL`** if not using `https://www.citedy.com`), load `.env` if you use one, then:
+
+```bash
+set -a && source .env && set +a
+citedy-reddit-run --dry-run
+citedy-reddit-run
+```
+
+If **`config.yaml`** exists in the current directory, it wins. If there is no `config.yaml` but **`config.example.yaml`** is present, that file is used. Otherwise the packaged defaults apply and relative paths (e.g. state file) resolve from **the current working directory**.
+
 Upgrade later:
 
 ```bash
 pipx upgrade citedy-reddit-writer
 # or: pip install -U citedy-reddit-writer
+```
+
+### Reddit transport fallback
+
+Reddit may intermittently block one HTTP stack while allowing another for the exact same public listing URL. The default **`reddit.transport: auto`** mode tries **`httpx`** first and automatically retries via Python’s stdlib **`urllib`** when Reddit returns a block page or a transport-specific fetch failure.
+
+You can pin the behavior if you need to debug or force one path:
+
+```yaml
+reddit:
+  transport: "auto" # auto | httpx | urllib
+```
+
+Or override it at runtime:
+
+```bash
+export CITEDY_REDDIT_TRANSPORT=urllib
 ```
 
 ---
@@ -240,7 +269,7 @@ flowchart LR
 
 **Step by step**
 
-1. **Fetch** recent posts from each configured subreddit using Reddit’s **public** listing endpoints (not the paid “scout” Reddit scout inside Citedy — so you don’t burn scout credits on every scheduler tick).
+1. **Fetch** recent posts from each configured subreddit using Reddit’s **public** listing endpoints (not the paid “scout” Reddit scout inside Citedy — so you don’t burn scout credits on every scheduler tick). In the default `auto` mode the CLI will retry with an alternate HTTP transport if Reddit blocks the first attempt.
 2. **Filter** by include/exclude keywords, minimum score, and max post age.
 3. **Dedupe** using a local JSON state file (post IDs and title hashes), optionally cross-checking **recent article titles** from your Citedy account so you don’t repeat topics.
 4. **Respect caps**: `articles_per_run` and `max_articles_per_day` prevent bursts.
@@ -289,6 +318,17 @@ Ensure the service environment loads **`.env`** or injects `CITEDY_AGENT_API_KEY
 | **Codex**       | In the **saas-blog** monorepo: `.codex/skills/citedy-reddit-writer/SKILL.md`                                                            |
 
 This repo includes **`.claude/`** and **`.cursor/skills/`** for a **standalone clone**. For Codex-only setups, copy `.codex/skills/...` from the monorepo if needed.
+
+### saas-blog monorepo: one command from the Next.js repo root
+
+If **`CITEDY_AGENT_API_KEY`** (and optional vars) live in the **monorepo** `.env` and `config.yaml` is under **`citedy-reddit-writer/`** (after `citedy-reddit-setup`), run:
+
+```bash
+npm run citedy-reddit-writer -- --dry-run   # safe: no API writes
+npm run citedy-reddit-writer                # real run
+```
+
+This uses **`run-with-env.sh`**: loads **`../.env`** then **`citedy-reddit-writer/.env`** (package overrides parent). Uses **`citedy-reddit-writer/.venv/bin/citedy-reddit-run`** when present; otherwise **`citedy-reddit-run`** on `PATH`. Install once: `cd citedy-reddit-writer && python3 -m venv .venv && .venv/bin/pip install -e .`.
 
 ---
 

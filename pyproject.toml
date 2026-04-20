@@ -1,6 +1,6 @@
 [project]
 name = "citedy-reddit-writer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Reddit listings + Citedy Agent API autopilot (no scout credits). Optional interactive setup."
 readme = "README.md"
 requires-python = ">=3.10"
